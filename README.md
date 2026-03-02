@@ -21,5 +21,6 @@ Scripts and documentation for running HPC benchmarks on OpenFOAM solvers.
 
 ## References
 
+- [OpenFOAM HPC Benchmark Suite](https://develop.openfoam.com/committees/hpc/) 
 - [OpenFOAM HPC Technical Committee](https://develop.openfoam.com/committees/hpc)
 - [OpenFOAM User Guide - Parallel Running](https://www.openfoam.com/documentation/user-guide/3-running-applications/3.2-running-applications-in-parallel)
