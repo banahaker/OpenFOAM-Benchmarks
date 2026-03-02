@@ -114,7 +114,7 @@ Three mesh sizes are tested to expose different scaling regimes. Each mesh is ru
 | Script                        | Purpose                                                                 |
 |-------------------------------|-------------------------------------------------------------------------|
 | `00_setup.sh`                 | Clone HPC repo; create all case directories; write `decomposeParDict`   |
-| `01_submit_jobs.sh`           | Generate per-case SLURM job scripts and submit all jobs                 |
+| `01_submit_jobs.sh`           | Generate per-case SLURM job scripts and submit jobs (skips completed)   |
 | `02_collect_results_fixed.sh` | Parse `log.icoFoam`; compute Speedup/Efficiency; output CSV and report  |
 
 ---
@@ -175,6 +175,8 @@ Then submit all jobs at once:
 ```bash
 bash 01_submit_jobs.sh
 ```
+
+The script automatically **skips cases where `log.icoFoam` already exists**, allowing you to safely re-run it without re-submitting completed jobs. (So you can just remove `log.icoFoam` and re-run the script to re-submit jobs you want.)
 
 Each job is independent and self-contained (runs `blockMesh` → `decomposePar` → `icoFoam`). SLURM will schedule them concurrently when resources allow. Job IDs are saved to `cavity3D_benchmark/.submitted_job_ids`.
 

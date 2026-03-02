@@ -57,6 +57,12 @@ for CASE_DIR in $(ls -d "$BASE_DIR"/*/ 2>/dev/null | sort -V); do
     CASE_NAME=$(basename "$CASE_DIR")
     JOBSCRIPT="$CASE_DIR/run.slurm"
 
+    # Skip if already completed
+    if [ -f "$CASE_DIR/log.icoFoam" ]; then
+        echo "  SKIP     : $CASE_NAME (log.icoFoam exists)"
+        continue
+    fi
+
     # ------------------------------------------------------------------
     # Generate SLURM job script
     # ------------------------------------------------------------------
@@ -99,11 +105,18 @@ fi
 
 # ---- 4. Solve -------------------------------------------------------
 echo "--- icoFoam (np=${NP}) ---"
+echo "    SLURM_JOB_NODELIST : \$SLURM_JOB_NODELIST"
+echo "    SLURM_NTASKS       : \$SLURM_NTASKS"
 if [ ${NP} -gt 1 ]; then
-    mpirun -np ${NP} \\
-           --map-by core \\
-           --bind-to core \\
-           icoFoam -parallel > log.icoFoam 2>&1
+    # Use srun (SLURM-native) instead of mpirun.
+    # srun reads the full node allocation directly from the SLURM environment,
+    # which guarantees all ${NP} ranks are distributed correctly across nodes.
+    # mpirun without explicit PMI/PMIx integration defaults to local-only
+    # slot discovery and fails when np > cores-per-node (e.g. np=72 on 2 nodes).
+    srun --ntasks=${NP} \\
+         --ntasks-per-node=${TASKS_PER_NODE} \\
+         --cpu-bind=cores \\
+         icoFoam -parallel > log.icoFoam 2>&1
 else
     icoFoam > log.icoFoam 2>&1
 fi
