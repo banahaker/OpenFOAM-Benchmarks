@@ -80,8 +80,17 @@ for CASE_DIR in $(ls -d "$BASE_DIR"/*/ 2>/dev/null | sort -V); do
 #SBATCH --exclusive           # avoid noisy-neighbour effects on timing
 
 # ---- Environment ----------------------------------------------------
-# Uncomment if OpenFOAM is not already loaded:
-# spack load openfoam
+# CRITICAL: Load the exact OpenMPI that OpenFOAM was compiled against.
+# Confirmed via: ldd $(which icoFoam) | grep mpi
+#   -> openmpi-4.1.5-tsqhddn4jhb7ceo4zp27qaofcgd73ncm
+# Loading a different OpenMPI build (e.g. qmjvzj7) causes MPI_Init to
+# fail with "NULL communicator" due to ABI mismatch.
+module purge
+module load openmpi/4.1.5-tsqhddn4
+
+# Verify correct MPI is loaded (hash must contain tsqhddn4)
+echo "mpirun path : $(which mpirun)"
+echo "icoFoam mpi : $(ldd $(which icoFoam) | grep libmpi)"
 
 cd "${CASE_DIR}"
 echo "====== START: ${CASE_NAME}  np=${NP}  \$(date) ======"
@@ -113,10 +122,26 @@ if [ ${NP} -gt 1 ]; then
     # which guarantees all ${NP} ranks are distributed correctly across nodes.
     # mpirun without explicit PMI/PMIx integration defaults to local-only
     # slot discovery and fails when np > cores-per-node (e.g. np=72 on 2 nodes).
-    srun --ntasks=${NP} \\
-         --ntasks-per-node=${TASKS_PER_NODE} \\
-         --cpu-bind=cores \\
-         icoFoam -parallel > log.icoFoam 2>&1
+    # OpenMPI was not built --with-slurm, so srun cannot launch it.
+    # Instead, use mpirun with an explicit hostfile generated at runtime
+    # from $SLURM_JOB_NODELIST so mpirun sees all allocated nodes.
+    HOSTFILE="${CASE_DIR}/hostfile_np${NP}"
+    scontrol show hostnames "\$SLURM_JOB_NODELIST" | \
+        awk -v slots=${TASKS_PER_NODE} '{print \$1 " slots=" slots}' \
+        > "\$HOSTFILE"
+
+    echo "    hostfile contents:"
+    cat "\$HOSTFILE"
+
+    mpirun -np ${NP} \\
+           --hostfile "\$HOSTFILE" \\
+           --map-by core \\
+           --bind-to core \\
+           -x PATH \\
+           -x LD_LIBRARY_PATH \\
+           -x WM_PROJECT_DIR \\
+           -x FOAM_APPBIN \\
+           icoFoam -parallel > log.icoFoam 2>&1
 else
     icoFoam > log.icoFoam 2>&1
 fi
