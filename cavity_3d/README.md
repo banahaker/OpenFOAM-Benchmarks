@@ -32,12 +32,12 @@ This benchmark suite evaluates the **strong scaling** performance of OpenFOAM's 
 
 ```
 Node 1                               Node 2
-┌────────────────────────────────┐   ┌────────────────────────────────┐
-│  Socket 0          Socket 1    │   │  Socket 0          Socket 1    │
-│  18 cores          18 cores    │   │  18 cores          18 cores    │
+┌─────────────────────────────────┐   ┌─────────────────────────────────┐
+│  Socket 0          Socket 1     │   │  Socket 0          Socket 1     │
+│  18 cores          18 cores     │   │  18 cores          18 cores     │
 │  NUMA domain 0     NUMA domain 1│   │  NUMA domain 2     NUMA domain 3│
 │  BW = 128 GB/s     BW = 128 GB/s│   │  BW = 128 GB/s     BW = 128 GB/s│
-└────────────────────────────────┘   └────────────────────────────────┘
+└─────────────────────────────────┘   └─────────────────────────────────┘
 
  np = 1–18            np = 19–36            np = 37–72
  Single socket        Intra-node            Cross-node
